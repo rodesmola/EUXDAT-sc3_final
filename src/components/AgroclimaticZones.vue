@@ -89,6 +89,22 @@
                 </v-btn>
               </v-flex>
 
+<HPCsetup/>
+<HPCsetupKC/>
+
+
+              <v-flex xs6 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
+                <v-btn small round color="#27304c"  dark @click="runHPCService(true)" title="Run service" >
+                KEYCLOAK
+                </v-btn>
+              </v-flex>
+
+              <v-flex xs6 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
+                <v-btn small round color="#27304c"  dark @click="runHPCService(false)" title="Run service" >
+                HPC
+                </v-btn>
+              </v-flex>              
+
             </v-layout>
         </v-form> 
       </v-flex>
@@ -122,12 +138,16 @@ import VectorSource from 'ol/source/Vector';
 import {Fill, Stroke, Style, Circle} from 'ol/style.js';
 
 import UserPolygons from '@/components/UserPolygons.vue'
+import HPCsetup from '@/components/HPCsetup.vue'
+import HPCsetupKC from '@/components/HPCsetupKC.vue'
 import CONST from "../const";
 
 export default {
     name: "AgroclimaticZones",
     components: {
-        UserPolygons
+      UserPolygons,
+      HPCsetup,
+      HPCsetupKC
     },
     props: {},
     data: () => ({
@@ -149,6 +169,14 @@ export default {
       }    
     }),
     methods: {
+      runHPCService(isKeyCloak){
+        if(isKeyCloak){
+          this.$eventBus.$emit('run-hpc-kc', this.agroClimaticData);
+        }else{
+          this.$eventBus.$emit('run-hpc', this.agroClimaticData);
+        }
+        
+      },
       /**
       * Create a new deployment and install it
       *
@@ -441,6 +469,9 @@ export default {
       this.$eventBus.$on('is-selected', (bool)  => {      
         this.isSelected = bool      
       });
+      this.$eventBus.$on('draw-output', (geojson)  => {      
+        this.drawOutput(geojson);
+      });     
     }
 };
 </script>
