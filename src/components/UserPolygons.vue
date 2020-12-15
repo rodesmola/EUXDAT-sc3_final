@@ -132,7 +132,12 @@ export default {
         isDrawing: false,
         outputGeojson: {},
         isOutput: false,
-        selectedPolygon: "",
+        selectedPolygon: {
+            properties:{
+                culture: "",
+                pk: ""
+            }   
+        },
         isSelected: false,
         newPolygon: {},
         newPolygonName: "New polygon",
@@ -166,7 +171,7 @@ export default {
         getUserLayers(){  
  
             var url = this.dbHost.concat(this.$store.state.user.preferred_username,
-                '/fields/epsg/3857/geojson');
+                '/fields/epsg/4326/geojson');
 
             this.$http.get(url).then(response => {
            
@@ -204,26 +209,27 @@ export default {
         */
         zoomToPolygon(pk){
 
-            var self = this;
-            var feature;
-            var layer = this.getLayerFromMapByName('userPolygonsLayer');
-            this.isSelected = true;
+            if(pk){
+                var self = this;
+                var feature;
+                var layer = this.getLayerFromMapByName('userPolygonsLayer');
+                this.isSelected = true;
 
-            layer.getSource().getFeatures().forEach(function(fea){                
-                if(fea.getProperties().pk === pk){
-                    self.$store.state.map.getView().fit(fea.getGeometry());                                        
-                    feature = fea;
-                }else{
-                fea.setStyle(self.defaultStyle);
-                }
-            });
+                layer.getSource().getFeatures().forEach(function(fea){                
+                    if(fea.getProperties().pk === pk){
+                        self.$store.state.map.getView().fit(fea.getGeometry());                                        
+                        feature = fea;
+                    }else{
+                    fea.setStyle(self.defaultStyle);
+                    }
+                });
 
-            feature.setStyle(this.selectedStyle)
-            this.polygonBBOX = feature.getGeometry().getExtent();
+                feature.setStyle(this.selectedStyle)
+                this.polygonBBOX = feature.getGeometry().getExtent();
 
-            this.$store.state.selectedPolygon = feature;
-            this.$eventBus.$emit('is-selected', true);    
-
+                this.$store.state.selectedPolygon = feature;
+                this.$eventBus.$emit('is-selected', true);    
+            }
         },//zoomToPolygon
 
         /**
@@ -270,7 +276,7 @@ export default {
                     'crs': {
                     'type': 'name',
                     'properties': {
-                        'name': 'EPSG:3857'
+                        'name': 'EPSG:4326'
                     }
                     },
                     'features': [{
@@ -319,7 +325,12 @@ export default {
 
                 self.dialogDeletePolygon = false;
                 self.getUserLayers(false);
-                self.selectedPolygon = "";                
+                self.selectedPolygon = {
+                    properties:{
+                        culture: "",
+                        pk: ""
+                    }
+                }
                 self.isSelected = false;
                 this.$eventBus.$emit('is-selected', false);
 

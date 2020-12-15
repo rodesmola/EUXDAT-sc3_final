@@ -29,7 +29,9 @@ export default {
          */
         runHPCService(agroClimaticData, deploymentName){
             
-            var self = this
+            var self = this;
+            this.$eventBus.$emit('is-running', true);
+
             var url = 'https://cloudify-api-test.test.euxdat.eu/api/v3.1/'.concat("deployments/", deploymentName);
             var headers = {
                 'Authorization': this.cloudifyHeader,
@@ -85,7 +87,7 @@ export default {
                     };
                     self.$http.post(url, body, {headers}).then(response => {                                 
                         self.$eventBus.$emit('show-alert', "success", response.statusText);
-                        self.getRunJobStatus(response.body.id, response.body.deployment_id, deploymentName)
+                        self.getRunJobStatus(response.body.id, response.body.deployment_id)
                     }, response => {
                         self.$eventBus.$emit('show-alert', "error", response.statusText);
                     });
@@ -101,7 +103,7 @@ export default {
 
         },//getExecutionStatus
 
-        getRunJobStatus(workflow_id, deployment_id, deploymentName){
+        getRunJobStatus(workflow_id, deployment_id){
 
             var self = this;
             var url = "http://cloudify-api-test.test.euxdat.eu/api/v3.1/executions/".concat(workflow_id, '?_include=status');
@@ -114,8 +116,8 @@ export default {
         
                 if(response.body.status === 'terminated'){
                 
-                    var urlFinal = "https://apache.test.euxdat.eu/agroclimatic_zones_scenario_outputs/".concat(this.user.preferred_username, 
-                    "/frostdates/", deploymentName, ".geojson")        
+                    var urlFinal = "https://apache.test.euxdat.eu/agroclimatic_zones_scenario_outputs/".concat(this.$store.state.user.preferred_username, 
+                    "/frostdates/", deployment_id, ".geojson")        
                     var headersFinal = {
                         'Authorization': this.authHeader,
                         'Tenant': 'default_tenant'
@@ -150,7 +152,7 @@ export default {
             var selectedPolygon = this.$store.state.selectedPolygon.getGeometry().getExtent();
 
             var HPC = {
-                'blueprint_id': 'test_blueprint_agroclimatic_4cores', //agroclimatic_frostdates_pilot_hawk_priority_512cores_new', 
+                'blueprint_id': 'agroclimatic_frostdates_pilot_hawk_priority_512cores_new', //'test_blueprint_agroclimatic_4cores', 
                 inputs: {
                     'hpc_base_dir': '$HOME',
                     'hpc_interface_config': {

@@ -19,12 +19,13 @@ export default {
         apacheURL: CONST.apacheURL,
         HPCdata: HPC.HPCsetup,
         cloudifyHeader: CONST.cloudifyHeader,    
-        platformURL: CONST.platformHost
+        platformURL: CONST.platformHost,
+        cloudifyHPChost: CONST.cloudifyHPChost
     }),
     methods: {
         getKeyCloakData(agroClimaticData, deploymentName){
-
-
+            
+            this.$eventBus.$emit('is-running', true);
             var user = 'cloudify'
             var password = 'jLPB6Q5DQ-sQDN' 
             var payload = 'grant_type=password&client_id=admin-cli&username='+user+'&password='+password
@@ -55,7 +56,7 @@ export default {
         runHPCService(hpcData, deploymentName){
             
             var self = this
-            var url = 'https://cloudify-api-test.test.euxdat.eu/api/v3.1/'.concat("deployments/", deploymentName);
+            var url = this.cloudifyHPChost.concat("deployments/", deploymentName);
             var headers = {
                 'Authorization': this.cloudifyHeader,
                 'Tenant': 'default_tenant'  ,
@@ -63,7 +64,7 @@ export default {
             };
 
             this.$http.put(url, hpcData, {headers}).then(response => {
-                url = 'https://cloudify-api-test.test.euxdat.eu/api/v3.1/'.concat("executions");
+                url = this.cloudifyHPChost.concat("executions");
                 var body = {
                     "deployment_id": deploymentName,
                     "workflow_id": "install"
@@ -89,7 +90,7 @@ export default {
         getExecutionStatus(id, deploymentName){
 
             var self = this;
-            var url = "http://cloudify-api-test.test.euxdat.eu/api/v3.1/executions/".concat(id, '?_include=status');
+            var url = this.cloudifyHPChost.concat("executions/", id, '?_include=status');
             var headers = {
                 'Authorization': this.cloudifyHeader,
                 'Tenant': 'default_tenant'
@@ -98,7 +99,7 @@ export default {
             this.$http.get(url, {headers}).then(response => {
         
                 if(response.body.status === 'terminated'){
-                    url = 'https://cloudify-api-test.test.euxdat.eu/api/v3.1/'.concat("executions");
+                    url = this.cloudifyHPChost.concat("executions");
                     var headers = {
                         'Authorization': this.cloudifyHeader,
                         'Tenant': 'default_tenant'  ,
@@ -110,7 +111,7 @@ export default {
                     };
                     self.$http.post(url, body, {headers}).then(response => {                                 
                         self.$eventBus.$emit('show-alert', "success", response.statusText);
-                        self.getRunJobStatus(response.body.id, response.body.deployment_id, deploymentName)
+                        self.getRunJobStatus(response.body.id, response.body.deployment_id)
                     }, response => {
                         self.$eventBus.$emit('show-alert', "error", response.statusText);
                     });
@@ -126,10 +127,10 @@ export default {
 
         },//getExecutionStatus
 
-        getRunJobStatus(workflow_id, deployment_id, deploymentName){
+        getRunJobStatus(workflow_id, deployment_id){
 
             var self = this;
-            var url = "http://cloudify-api-test.test.euxdat.eu/api/v3.1/executions/".concat(workflow_id, '?_include=status');
+            var url = this.cloudifyHPChost.concat("executions/", workflow_id, '?_include=status');
             var headers = {
                 'Authorization': this.cloudifyHeader,
                 'Tenant': 'default_tenant'
@@ -139,8 +140,8 @@ export default {
         
                 if(response.body.status === 'terminated'){
                 
-                    var urlFinal = "https://apache.test.euxdat.eu/agroclimatic_zones_scenario_outputs/".concat(this.user.preferred_username, 
-                    "/frostdates/", deploymentName, ".geojson")        
+                    var urlFinal = this.apacheURL.concat(this.$store.state.user.preferred_username, 
+                    "/frostdates/", deployment_id, ".geojson")        
                     var headersFinal = {
                         'Authorization': this.authHeader,
                         'Tenant': 'default_tenant'
@@ -174,7 +175,7 @@ export default {
             var selectedPolygon = this.$store.state.selectedPolygon.getGeometry().getExtent();
 
             var HPC = {
-                'blueprint_id': 'test_blueprint_agroclimatic_4cores', //agroclimatic_frostdates_pilot_hawk_priority_512cores_new', 
+                'blueprint_id': 'agroclimatic_frostdates_pilot_hawk_priority_512cores_new', //'test_blueprint_agroclimatic_4cores',  
                 inputs: {
                     'hpc_base_dir': '$HOME',
                     'hpc_interface_config': {
@@ -183,10 +184,10 @@ export default {
                     },
                     'hpc_interface_credentials': {
                         'host': 'hawk.hww.hlrs.de',
-                        'user': authData.hpc.user, //<hpc_user_name></hpc_user_name>,
-                        'password': authData.hpc.user_pwd, //<hpc_user_password></hpc_user_password>,
-                        'private_key': authData.hpc.private_key, //<hpc_user_private_key></hpc_user_private_key>,
-                        'private_key_password': authData.hpc.private_key_pwd //<hpc_user_private_password></hpc_user_private_password>
+                        'user': authData.hpc.user.toString().replace(/  +/g, "\n").replace(/\n/g, "\n"), //<hpc_user_name></hpc_user_name>,
+                        'password': authData.hpc.user_pwd.toString().replace(/  +/g, "\n").replace(/\n/g, "\n"), //<hpc_user_password></hpc_user_password>,
+                        'private_key': authData.hpc.private_key.toString().replace(/  +/g, "\n").replace(/\n/g, "\n"), //<hpc_user_private_key></hpc_user_private_key>,
+                        'private_key_password': authData.hpc.private_key_pwd.toString().replace(/  +/g, "\n").replace(/\n/g, "\n") //<hpc_user_private_password></hpc_user_private_password>
                     },
                     'partition_name': 'default', 
                     'job_config_content':
@@ -224,15 +225,14 @@ export default {
                         'hpc_target': 'HAWK', 
                         'cloud_target': 'ATOSFR', 
                         'cloud_user': 'euxdat_user',
-                        'grid_userkey': '| '.concat(authData.grid.userkey),//'|'.concat(HPCdata.grid.userkey), // <gridftp userkey></gridftp userkey>,
-                        'grid_usercert': '| '.concat(authData.grid.usercert),// '|'.concat(HPCdata.grid.usercert), //<gridftp usercert></gridftp usercert>,
-                        'grid_certpass': authData.grid.certpass, //<gridftp userpass></gridftp userpass>
+                        'grid_userkey': authData.grid.userkey.toString().replace(/  +/g, "\n").replace(/\n/g, "\n"),//'|'.concat(HPCdata.grid.userkey), // <gridftp userkey></gridftp userkey>,
+                        'grid_usercert': authData.grid.usercert.toString().replace(/  +/g, "\n").replace(/\n/g, "\n"),// '|'.concat(HPCdata.grid.usercert), //<gridftp usercert></gridftp usercert>,
+                        'grid_certpass': authData.grid.certpass.toString().replace(/  +/g, "\n").replace(/\n/g, "\n"), //<gridftp userpass></gridftp userpass>
                     }  
                 }
             };
            
             this.runHPCService(HPC, deploymentName)
-
         },
     },
    

@@ -83,27 +83,25 @@
                 </span>
               </v-flex>                   
 
-              <v-flex xs12 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
+              <!-- <v-flex xs12 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
                 <v-btn small round color="#27304c"  dark @click="runService()" title="Run service" >
+                RUN
+                </v-btn>
+              </v-flex> -->
+
+              <HPCsetup/>
+              <HPCsetupKC/>
+              <v-flex xs12 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
+                <v-btn small round color="#27304c"  dark @click="runHPCService(true)" title="Run service in HPC" >
                 RUN
                 </v-btn>
               </v-flex>
 
-<HPCsetup/>
-<HPCsetupKC/>
-
-
-              <v-flex xs6 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
-                <v-btn small round color="#27304c"  dark @click="runHPCService(true)" title="Run service" >
-                KEYCLOAK
-                </v-btn>
-              </v-flex>
-
-              <v-flex xs6 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
+              <!-- <v-flex xs6 class="text-xs-right pr-3" v-if="isSelected && !isOutput" style="padding: 0px; margin-bottom: 5px;">
                 <v-btn small round color="#27304c"  dark @click="runHPCService(false)" title="Run service" >
                 HPC
                 </v-btn>
-              </v-flex>              
+              </v-flex>               -->
 
             </v-layout>
         </v-form> 
@@ -161,8 +159,8 @@ export default {
       agroClimaticData: {
         hour_start: 0,
         hour_end: 23,
-        years_start: 2017,
-        years_end: 2018,
+        years_start: 2016,
+        years_end: 2019,
         day_row: 1,
         frost_degree: 0,
         probability: 10
@@ -321,34 +319,39 @@ export default {
       * @public
       */
       drawOutput(geojson){
+        
+        if(geojson.toString().length < 1){
+          this.$eventBus.$emit('show-alert', "error", "No output data generated, try a bigger area or bigger range between start and end year (3 years as minimum)");
+          this.isRunning = false;
+          this.isOutput = true;
+        }else{
+          var vectorSource = new VectorSource({
+            features: (new GeoJSON()).readFeatures(geojson)
+          });
 
-        var vectorSource = new VectorSource({
-          features: (new GeoJSON()).readFeatures(geojson)
-        });
-
-        var vectorLayer = new VectorLayer({
-          source: vectorSource,
-          style: new Style({
-            image: new Circle({
-              radius: 7,
-              fill: new Fill({color: 'blue'}),
-              stroke: new Stroke({
-                color: 'red',
-                width: 3
+          var vectorLayer = new VectorLayer({
+            source: vectorSource,
+            style: new Style({
+              image: new Circle({
+                radius: 7,
+                fill: new Fill({color: 'blue'}),
+                stroke: new Stroke({
+                  color: 'red',
+                  width: 3
+                })
               })
             })
-          })
-        });
+          });
 
-        vectorLayer.set('name', 'output');
-        this.$store.state.map.addLayer(vectorLayer);
-        vectorLayer.setZIndex(99)
-        this.isRunning = false;
-        this.isOutput = true;
-        this.$store.state.map.getView().fit(this.$store.state.selectedPolygon.getGeometry().getExtent());
-        this.$eventBus.$emit('show-outputPanel', true, this.downloadURL);
-        this.$eventBus.$emit('disable-addBtn', true);
-
+          vectorLayer.set('name', 'output');
+          this.$store.state.map.addLayer(vectorLayer);
+          vectorLayer.setZIndex(99)
+          this.isRunning = false;
+          this.isOutput = true;
+          this.$store.state.map.getView().fit(this.$store.state.selectedPolygon.getGeometry().getExtent());
+          this.$eventBus.$emit('show-outputPanel', true, this.downloadURL);
+          this.$eventBus.$emit('disable-addBtn', true);
+        }
       },//drawOutput   
       /**
       * Get the map layer by name and return it as a OL layer object
@@ -458,7 +461,7 @@ export default {
         if (!this.$v.agroClimaticData.probability.$dirty) return errors
           !this.$v.agroClimaticData.probability.required && errors.push('Mandatory field')
           !this.$v.agroClimaticData.probability.between && errors.push('Values from 0 to 100')
-          !this.$v.agroClimaticData.probabilitye.numeric && errors.push('Insert a number')
+          !this.$v.agroClimaticData.probability.numeric && errors.push('Insert a number')
           return errors
         },                     
       },
@@ -471,7 +474,10 @@ export default {
       });
       this.$eventBus.$on('draw-output', (geojson)  => {      
         this.drawOutput(geojson);
-      });     
+      });
+      this.$eventBus.$on('is-running', (bool)  => {      
+        this.isRunning = bool;
+      });        
     }
 };
 </script>
